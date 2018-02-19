@@ -47,5 +47,11 @@ public class User {
         waitingTime = (System.currentTimeMillis() - enterTime) / DELAY;
     }
 
-
+    @Override
+    public String toString() {
+        return "User{" +
+                "id=" + id +
+                ", rank=" + rank +
+                '}';
+    }
 }
