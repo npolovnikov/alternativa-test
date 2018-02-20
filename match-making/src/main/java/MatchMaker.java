@@ -22,6 +22,7 @@ public class MatchMaker {
     private final List<Lobby> lobbyList;
 
     public MatchMaker() {
+        LOG.info("Constructor");
         this.lobbyList = new ArrayList<>();
         this.executorService = Executors.newSingleThreadScheduledExecutor();
         this.executorService.scheduleWithFixedDelay(this::joinLobby, DELAY, DELAY, TimeUnit.MILLISECONDS);
@@ -32,8 +33,9 @@ public class MatchMaker {
      */
     private void joinLobby() {
         synchronized (SEMAPHORE) {
-            for (int i = 0; i < lobbyList.size(); i++) {
-                for (int j = i; j < lobbyList.size(); j++) {
+            LOG.debug("Start joining, lobby size = {}", lobbyList.size());
+            for (int i = 0; i < lobbyList.size() - 1; i++) {
+                for (int j = i + 1; j < lobbyList.size(); j++) {
                     join(lobbyList.get(i), lobbyList.get(j));
                 }
             }
@@ -48,23 +50,28 @@ public class MatchMaker {
      * @param to Куда, возможно, их переместим
      */
     private void join(Lobby from, Lobby to) {
-        final List<User> toBeAdded = from.getUserList().stream()
-                .filter(user -> tryAddToLobby(user, to))
-                .collect(Collectors.toList());
+//        synchronized (SEMAPHORE) {
+            LOG.debug("Joining from {}, to {}", from, to);
+            final List<User> toBeAdded = from.getUserList().stream()
+                    .filter(user -> tryAddToLobby(user, to))
+                    .collect(Collectors.toList());
 
-        for (User user: toBeAdded) {
-            to.addUser(user);
-            from.getUserList().remove(user);
+            LOG.debug("Users to be Added {}", toBeAdded);
+            for (User user : toBeAdded) {
+                to.addUser(user);
+                from.getUserList().remove(user);
 
-            if (to.isComplite()) {
-                startGame(to);
-                break;
+                if (to.isComplite()) {
+                    startGame(to);
+                    break;
+                }
             }
-        }
+//        }
     }
 
     public void addUser(User user) {
         synchronized (SEMAPHORE) {
+            LOG.debug("Adding new User");
             final Lobby lobby = lobbyList
                     .stream()
                     .filter(l -> tryAddToLobby(user, l))
@@ -72,6 +79,7 @@ public class MatchMaker {
                     .orElseGet(this::createNewLobby);
 
             lobby.addUser(user);
+            LOG.debug("New used {}, added to {}", user, lobby);
             if (lobby.isComplite()) {
                 startGame(lobby);
             }
@@ -86,10 +94,12 @@ public class MatchMaker {
      * @param lobby
      */
     private void startGame(Lobby lobby) {
-        LOG.info("{} {}", SDF.format(new Date()), lobby);
+        lobbyList.remove(lobby);
+        LOG.info("{} {}", SDF.format(new Date()), lobby.getUserList());
     }
 
     private Lobby createNewLobby() {
+        LOG.debug("Creating new Lobby");
         Lobby lobby = new Lobby();
         lobbyList.add(lobby);
         return lobby;
@@ -114,7 +124,7 @@ public class MatchMaker {
      * @return
      */
     private boolean match(User a, User b) {
-        return Math.abs(a.getRank() - b.getRank()) >=
+        return Math.abs(a.getRank() - b.getRank()) <=
                 a.getWaitingTime() + b.getWaitingTime();
     }
 }

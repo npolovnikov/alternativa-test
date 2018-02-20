@@ -14,6 +14,9 @@ public class Lobby {
     }
 
     public void addUser(User user) {
+        if (userList.size() == MAX_SIZE) {
+            throw new ArrayIndexOutOfBoundsException("Максимальное число пользователей в одном лобби = " + MAX_SIZE);
+        }
         userList.add(user);
     }
 
@@ -31,8 +34,9 @@ public class Lobby {
 
     @Override
     public String toString() {
-        return userList.stream()
-                .map(User::toString)
-                .collect(Collectors.joining(", "));
+        return "Lobby : " +
+                userList.stream()
+                        .map(User::toString)
+                        .collect(Collectors.joining(", ", "[ ", " ]"));
     }
 }
